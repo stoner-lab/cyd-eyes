@@ -47,8 +47,8 @@ còn ~23% sau 15 s không chạm.
 ## Lệnh
 
 ```powershell
-$pio  = 'C:\Python314\python.exe'
-$proj = 'C:\Users\duy\.cline\data\workspaces\chat\cyd-pet'
+$pio  = 'python'          # hoặc đường dẫn đầy đủ tới python có PlatformIO
+$proj = '.'               # thư mục chứa platformio.ini
 
 & $pio -m platformio run -e cyd -t upload --project-dir $proj   # nạp
 & $pio -m platformio run -e cyd_probe -t upload --project-dir $proj
@@ -59,10 +59,12 @@ thử nhiều lượt) thay vì `upload` trực tiếp. Nạp bị huỷ giữa 
 
 ## Ảnh
 
-Ảnh nguồn ở `C:\Users\duy\Desktop\cyd`. Gửi sang thẻ:
+Ảnh **không** nằm trong repo: chúng ở một thư mục riêng trên máy, chỉ thẻ SD chứa bản
+đã resize. Gửi sang thẻ bằng:
 
 ```powershell
-& 'C:\Python314\python.exe' 'C:\Users\duy\.cline\data\workspaces\chat\cyd-pet\tools\send_photos.py' COM3
+$env:CYD_PHOTOS = 'D:\photos-cyd'      # thư mục chứa .jpg
+& python tools\send_photos.py COM3
 ```
 
 Script crop 4:3, thu nhỏ hai bước về 320×240, JPEG q92 **4:4:4** (4:2:0 làm nhoè chi tiết).

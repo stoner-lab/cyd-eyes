@@ -6,7 +6,7 @@ firmware exposes a tiny file receiver ("PUT <name> <bytes>" + raw data).
 Phone photos are cropped to 4:3 and resized to 320x240 first: the panel is
 320x240 and the JPEG decoder can only halve dimensions.
 
-Usage: python send_photos.py [COM3]
+Usage: python send_photos.py [COM3]  with CYD_PHOTOS pointing at the folder
 """
 
 import io
@@ -17,7 +17,7 @@ import time
 import serial
 from PIL import Image, ImageOps
 
-SOURCE = r"C:\Users\duy\Desktop\cyd"
+SOURCE = os.environ.get("CYD_PHOTOS", "photos")  # folder of .jpg to send
 TARGET_W, TARGET_H = 320, 240
 CHUNK = 512
 CHUNK_PAUSE = 0.06  # 115200 baud is ~11.5 kB/s; this stays under it
