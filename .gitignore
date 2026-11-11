@@ -1,0 +1,14 @@
+# PlatformIO build artefacts: 130 MB of toolchain output, never commit.
+.pio/
+.vscode/
+
+# Local credentials. This one matters: it holds the WiFi SSID and password.
+include/secrets.h
+
+# Logs and captures produced while flashing and debugging on this machine.
+*.log
+tools/flash_watch.log
+
+# OS noise
+Thumbs.db
+desktop.ini
