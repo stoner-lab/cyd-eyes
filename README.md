@@ -1,91 +1,114 @@
-# CYD eyes
+# cyd-eyes
 
-Đôi mắt biểu cảm trên board `ESP32-2432S028` (CYD bản hai cổng USB, chip CH340C).
-Màn 2.8" 320×240, cảm ứng điện trở XPT2046, microSD, LED RGB, LDR, không loa.
+Expressive animated eyes on a Cheap Yellow Display, plus a small photo viewer, 2048
+and a pomodoro timer. The eyes follow your finger, blink, get drowsy when ignored and
+shut happily when you stroke the gap between them.
 
-## Đang có gì
+Target board: **ESP32-2432S028R** ("CYD"), 2.8" 320x240, resistive touch, microSD,
+RGB LED, LDR. No speaker, so every reaction is visual.
 
-| Thành phần | Mô tả |
-|---|---|
-| `lib/eye` | Engine biểu cảm: 11 emotion, mắt pill bo góc, mí trên `lidDrop`, mắt nhắm cong, lông mày cong, catchlight, blink, gaze |
-| `lib/touch` | Driver XPT2046 bit-bang (bus riêng 25/32/33/36/39), hiệu chỉnh thực đo, lọc nhiễu 3 mẫu |
-| `lib/gallery` | Xem ảnh JPEG từ `/cyd` trên microSD, giải mã từ RAM (16–33 KB/ảnh), không dùng File handle |
-| `lib/game2048` | 2048 4×4, không animation, 32 byte bàn cờ, điểm + kỷ lục |
-| `lib/pomodoro` | Pomodoro 25/5, tiếng Anh, đếm bằng millis (không cần RTC) |
-| `lib/settings` | Độ sáng, mốc tắt màn, màu mắt — lưu NVS namespace `cfg` |
-| `lib/uploader` | Nhận file qua serial (`PUT`/`LIST`/`SHOW`/`TEST`) vì máy không có đầu đọc thẻ |
-| `src/eyes_main.cpp` | Vòng lặp 40 fps, cử chỉ, giảm sáng, chuyển màn |
+## What it does
 
-## Cử chỉ
+- Eleven expressions drawn procedurally from a parameter table, no bitmaps.
+- Gaze tracks the finger; slow drags only move the eyes.
+- Idle chain: dazed at 45 s, sleepy at 2 min with occasional yawns, asleep at 3 min
+  exactly when the backlight cuts.
+- Backlight: full, 23% after 15 s, off after 3 min. Touch wakes it instantly.
+- Frame budget follows the state: 40 fps in use, 25 when dimmed, 0 when dark.
+- Random JPEG from `/cyd` on the SD card, decoded from RAM into the panel.
+- 2048 on a 4x4 board, 32 bytes of state, tap the `<` button or hold still to leave.
+- Pomodoro 25/5 using `millis()`; no RTC needed.
+- Settings screen for brightness, screen-off timeout and eye colour, stored in NVS.
 
-| Ngữ cảnh | Thao tác | Kết quả |
+## Gestures
+
+| Screen | Action | Result |
 |---|---|---|
-| Màn mắt | Chạm | Chớp mắt |
-| Màn mắt | Vuốt lên ≥ 90 px và ≥ 675 px/s | Ảnh ngẫu nhiên |
-| Màn mắt | Vuốt phải ≥ 160 px và ≥ 520 px/s | Mở 2048 |
-| Màn mắt | Vuốt quanh vùng giữa hai mắt | Nhắm mắt tận hưởng (`CONTENT`) |
-| Màn ảnh | Vuốt lên ≥ 90 px | Ảnh khác |
-| Màn ảnh | Vuốt xuống ≥ 100 px | Về màn mắt |
-| 2048 | Vuốt 4 hướng ≥ 60 px | Đi nước |
-| 2048 | Chạm nút `<` góc trên-trái | Về màn mắt (giữ ván) |
-| 2048 | Giữ yên 1,5 s | Về màn mắt (dự phòng) |
-| 2048 | Game over → chạm | Ván mới |
-| Màn mắt | Vuốt xuống ≥ 90 px và ≥ 675 px/s | Mở Pomodoro |
-| Màn mắt | Vuốt trái ≥ 160 px và ≥ 520 px/s | Mở Settings |
-| Pomodoro | Chạm | Chạy / tạm dừng |
-| Pomodoro | Vuốt xuống / lên ≥ 60 px | Reset / về màn mắt |
-| Settings | Chạm nút | Đổi và lưu |
-| Settings | Vuốt phải ≥ 60 px | Về màn mắt |
+| Eyes | tap | blink |
+| Eyes | swipe up >= 90 px and >= 675 px/s | random photo |
+| Eyes | swipe right >= 160 px and >= 520 px/s | 2048 |
+| Eyes | swipe down >= 90 px and >= 675 px/s | pomodoro |
+| Eyes | swipe left >= 160 px and >= 520 px/s | settings |
+| Eyes | slow drag | gaze only |
+| Photo | up / down | next photo / back to eyes |
+| 2048 | any of four, >= 60 px | move |
+| 2048 | tap `<`, or hold 1.5 s | back to eyes |
+| Pomodoro | tap / down / up | start-stop / reset / back |
+| Settings | tap button / swipe right | change / back |
 
-Ngưỡng tốc độ chỉ áp dụng ở màn mắt, nơi cử chỉ tranh chấp với việc liếc mắt theo
-ngón tay. Kéo chậm chỉ làm mắt liếc. Trong game và màn ảnh, ngưỡng thấp vì không có
-gì để nhầm.
+Speed gates apply only on the eye screen, where a gesture competes with steering the
+gaze. Modal screens use distance alone.
 
-Tự động: `DAZED` sau 45 s, `SLEEPY` sau 3 phút, `ASLEEP` sau 5 phút; giảm đèn nền
-còn ~23% sau 15 s không chạm.
+## Build and flash
 
-## Lệnh
-
-```powershell
-$pio  = 'python'          # hoặc đường dẫn đầy đủ tới python có PlatformIO
-$proj = '.'               # thư mục chứa platformio.ini
-
-& $pio -m platformio run -e cyd -t upload --project-dir $proj   # nạp
-& $pio -m platformio run -e cyd_probe -t upload --project-dir $proj
+```bash
+pio run -e cyd -t upload        # firmware
+pio run -e cyd_probe -t upload  # hardware probe: colour bars, LED, LDR
 ```
 
-Cổng USB của board này chập chờn: dùng `tools\flash_retry.ps1` (chờ cổng rồi nạp,
-thử nhiều lượt) thay vì `upload` trực tiếp. Nạp bị huỷ giữa chừng sẽ để lại firmware dở.
-
-## Ảnh
-
-Ảnh **không** nằm trong repo: chúng ở một thư mục riêng trên máy, chỉ thẻ SD chứa bản
-đã resize. Gửi sang thẻ bằng:
+The USB socket on this board drops off the bus mid-upload, so flashing is usually done
+through the retry helper:
 
 ```powershell
-$env:CYD_PHOTOS = 'D:\photos-cyd'      # thư mục chứa .jpg
-& python tools\send_photos.py COM3
+powershell -ExecutionPolicy Bypass -File tools\flash_retry.ps1 -Env cyd -Attempts 6
 ```
 
-Script crop 4:3, thu nhỏ hai bước về 320×240, JPEG q92 **4:4:4** (4:2:0 làm nhoè chi tiết).
+An aborted upload leaves a half-written image behind; flash again rather than
+debugging the symptom.
 
-## Số liệu thật của board
+## Photos
 
-| Hạng mục | Giá trị |
+Photos stay out of the repository. Put JPEGs anywhere and point the sender at them:
+
+```powershell
+$env:CYD_PHOTOS = 'D:\photos-cyd'
+python tools\send_photos.py COM3
+```
+
+The script crops to 4:3, shrinks in two steps to 320x240 and encodes JPEG q92 with
+**4:4:4** chroma, because 4:2:0 smears small detail. Files are pushed over the serial
+line into `/cyd` on the card: this laptop has no SD reader, and the firmware accepts
+`PUT <name> <bytes>` followed by raw data.
+
+## Measured on this board
+
+| Item | Value |
 |---|---|
-| Panel | ILI9341, cần `-DTFT_INVERSION_ON=1` |
-| Hiệu chỉnh cảm ứng | X 360–1700, Y 320–1670, không hoán trục |
-| Điểm mù | sát biên trả toạ độ kẹp về 0 — nút bấm phải tính cả vùng 0..70 |
-| RAM tĩnh | 26.780 B / 327.680 B |
-| Flash | 422 KB / 3 MB |
-| fps màn mắt | 36–38 |
-| LDR | sáng = 0, che tay = tăng; `dark = ldr > 1500` |
+| Panel | ILI9341, needs `-DTFT_INVERSION_ON=1`; without it every colour inverts |
+| Touch | XPT2046 bit-banged on 25/32/33/36/39, calibration X 360-1700, Y 320-1670 |
+| Touch edges | readings clamp to coordinate 0 near the bezel; hit areas must include 0 |
+| LDR | dark means a HIGH reading (light gives 0) |
+| Static RAM | 26.8 KB of 320 KB |
+| Flash | 422 KB of 3 MB |
+| Frame rate | 36-38 fps on the eye screen |
 
-## Chưa làm
+Two library quirks worth remembering: `SD.exists()` reports the filesystem as
+unmounted on this core, so the JPEG decoder is fed an in-memory buffer instead of a
+path; and handing the decoder an open `File` draws part of the image and then abandons
+it, which looks like flicker.
 
-- OTA qua WiFi đã thử và **gỡ bỏ**: board nằm ở mạng khác PC (192.168.0.x so với
-  192.168.5.x), nên nạp bằng cáp qua `tools\flash_retry.ps1` là đường chính thức.
-  `include\secrets.h` còn trên đĩa nhưng không còn được biên dịch.
-- Kỷ lục 2048 chỉ nằm trong RAM, reset là mất (thêm 4 byte NVS là xong).
-- Chưa xác nhận đèn nền có nhấp nháy khi PWM ở mức 23% không.
-- Không có loa nên chưa có âm thanh.
+## Layout
+
+```
+src/          eyes_main.cpp, board.h, probe_main.cpp
+lib/eye       expression engine
+lib/touch     XPT2046 bit-bang driver with calibration
+lib/gallery   JPEG viewer reading /cyd
+lib/game2048  2048
+lib/pomodoro  25/5 timer
+lib/settings  brightness, timeout, eye colour (NVS)
+lib/uploader  serial file receiver and debug commands
+lib/pet       unused: the earlier stats-based pet, kept for later
+tools/        flash retry, photo sender, serial logger
+```
+
+## Not done
+
+- OTA over WiFi was built and removed: the board sits on a different subnet than the
+  PC, so cable flashing remains the supported path.
+- The 2048 best score lives in RAM only.
+- No audio until an 8 ohm speaker is wired to the P4 connector.
+
+## License
+
+MIT, see `LICENSE`.
