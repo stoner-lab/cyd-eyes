@@ -6,8 +6,8 @@ namespace {
 
 const int16_t ROW_Y[3] = {44, 92, 140};
 const int16_t ROW_H = 36;
-const int16_t BTN_X = 104;
-const int16_t BTN_W = 52;
+const int16_t BTN_X = 100;
+const int16_t BTN_W = 50;
 const int16_t BTN_GAP = 4;
 
 const char *BRIGHT_LABELS[3] = {"100%", "40%", "20%"};

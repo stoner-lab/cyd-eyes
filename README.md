@@ -20,6 +20,16 @@ RGB LED, LDR. No speaker, so every reaction is visual.
 - Pomodoro 25/5 using `millis()`; no RTC needed.
 - Settings screen for brightness, screen-off timeout and eye colour, stored in NVS.
 
+## Screens
+
+| | |
+|---|---|
+| ![eyes](docs/screens/eyes.png) | ![settings](docs/screens/settings.png) |
+| ![pomodoro](docs/screens/pomodoro.png) | ![2048](docs/screens/game2048.png) |
+
+These are drawings produced by `tools/make_previews.py` from the same coordinates,
+colours and font sizes as the firmware, not camera photographs of the panel.
+
 ## Gestures
 
 | Screen | Action | Result |
